@@ -1,0 +1,6 @@
+{
+  "name": "LEGA",
+  "description": "Aplikasi pemberi tips dan trik cara mengurangi kebiasaan merokok dengan proyeksi investasi dan kesehatan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
