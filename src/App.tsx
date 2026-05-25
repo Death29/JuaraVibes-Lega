@@ -6,19 +6,27 @@ import {
   Wind,
   User,
   ShieldAlert,
-  Activity
+  Activity,
+  History,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 type Level = 'ringan' | 'sedang' | 'berat' | 'akut';
-type AppScreen = 'login' | 'register' | 'diagnosis' | 'target_duration' | 'dashboard' | 'sos' | 'detail_tapering' | 'check_in' | 'profile';
+type AppScreen = 'login' | 'register' | 'diagnosis' | 'target_duration' | 'dashboard' | 'sos' | 'detail_tapering' | 'check_in' | 'profile' | 'history';
 type OutdoorLevel = 'ringan' | 'sedang' | 'berat';
-type Gender = 'pria' | 'wanita';
+type Gender = 'laki-laki' | 'perempuan';
 
 interface UserProfile {
   name: string;
   age: string;
   outdoorLevel: OutdoorLevel;
   gender: Gender;
+}
+
+interface CheckInLog {
+  time: string;
+  value: number;
 }
 
 interface DiagnosisResult {
@@ -37,6 +45,7 @@ interface UserData {
   targetDuration?: number;
   startDate?: string;
   checkIns?: Record<string, number>;
+  checkInLogs?: Record<string, CheckInLog[]>;
 }
 
 interface Database {
@@ -168,6 +177,80 @@ function SOSCraving({ onBack }: { onBack: () => void }) {
   );
 }
 
+function HistoryScreen({ onBack, userLogs, startDate }: { onBack: () => void, userLogs: Record<string, CheckInLog[]>, startDate: string }) {
+  const [currentDate, setCurrentDate] = useState(getTodayStr());
+
+  const handlePrevDay = () => {
+    const d = new Date(currentDate);
+    d.setDate(d.getDate() - 1);
+    setCurrentDate(d.toISOString().split('T')[0]);
+  };
+
+  const handleNextDay = () => {
+    const d = new Date(currentDate);
+    d.setDate(d.getDate() + 1);
+    const newDateStr = d.toISOString().split('T')[0];
+    if (newDateStr <= getTodayStr()) {
+      setCurrentDate(newDateStr);
+    }
+  };
+
+  const displayDateStr = new Date(currentDate).toLocaleDateString('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+
+  const logsForDay = userLogs[currentDate] || [];
+
+  return (
+    <motion.main className="flex-1 flex flex-col p-6 max-w-lg w-full mx-auto" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+       <div className="flex justify-between items-center mb-8">
+         <h2 className="text-xl font-bold tracking-tight text-white border-l-4 border-teal-500 pl-3">Riwayat Konsumsi</h2>
+         <button onClick={onBack} className="text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-white transition bg-white/5 px-4 py-2 rounded-lg border border-white/10">Kembali</button>
+       </div>
+
+       <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
+         <div className="flex justify-between items-center">
+            <button onClick={handlePrevDay} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex justify-center items-center text-gray-400 hover:text-white transition-colors" disabled={currentDate <= startDate}>
+               <ChevronLeft size={20} />
+            </button>
+            <div className="text-center flex-1">
+               <p className="text-sm font-bold text-teal-400 capitalize">{displayDateStr}</p>
+            </div>
+            <button onClick={handleNextDay} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex justify-center items-center text-gray-400 hover:text-white transition-colors disabled:opacity-30 disabled:hover:bg-white/5 disabled:hover:text-gray-400" disabled={currentDate >= getTodayStr()}>
+               <ChevronRight size={20} />
+            </button>
+         </div>
+       </div>
+
+       <div className="space-y-3">
+          {logsForDay.length === 0 ? (
+             <div className="bg-white/5 border border-white/10 rounded-xl p-8 text-center">
+                <p className="text-gray-500 text-sm italic">Tidak ada log aktivitas untuk hari ini.</p>
+             </div>
+          ) : (
+             logsForDay.map((log, index) => (
+                <div key={index} className="flex justify-between items-center bg-[#0a0a0a] border border-white/5 rounded-xl p-4">
+                   <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-teal-500/20 text-teal-400 flex justify-center items-center">
+                         <History size={14} />
+                      </div>
+                      <span className="text-white font-medium text-sm">Check-in ke-{index + 1}</span>
+                   </div>
+                   <div className="text-right">
+                      <p className="text-teal-400 font-bold text-lg leading-none mb-1">{log.value} <span className="text-[10px] text-gray-500 font-normal uppercase tracking-widest">Btg</span></p>
+                      <p className="text-[10px] text-gray-500">{log.time}</p>
+                   </div>
+                </div>
+             ))
+          )}
+       </div>
+    </motion.main>
+  );
+}
+
 export default function App() {
   const [db, setDb] = useState<Database>(() => {
     try {
@@ -192,7 +275,7 @@ export default function App() {
 
   // Forms and Temp state for onboarding
   const [authForm, setAuthForm] = useState({ email: '', password: '' });
-  const [profileForm, setProfileForm] = useState<UserProfile>({ name: '', age: '', outdoorLevel: 'sedang', gender: 'pria' });
+  const [profileForm, setProfileForm] = useState<UserProfile>({ name: '', age: '', outdoorLevel: 'sedang', gender: 'laki-laki' });
   const [diagForm, setDiagForm] = useState({ level: 'ringan', price: '', packs: '' });
   const [customTargetWeeks, setCustomTargetWeeks] = useState<string>('');
   
@@ -210,8 +293,7 @@ export default function App() {
 
   useEffect(() => {
     if (currentScreen === 'check_in' && activeUser) {
-      const td = getTodayStr();
-      setCheckInVal(activeUser.checkIns?.[td] || 0);
+      setCheckInVal(0);
     }
   }, [currentScreen]);
 
@@ -239,7 +321,8 @@ export default function App() {
                 diagnosis: tempDiagnosis,
                 targetDuration: tempTargetDuration,
                 startDate: existing.startDate || getTodayStr(),
-                checkIns: existing.checkIns || {}
+                checkIns: existing.checkIns || {},
+                checkInLogs: existing.checkInLogs || {}
             };
             setDb(prev => {
                const newDb = { ...prev, [authForm.email]: updatedUser };
@@ -266,7 +349,8 @@ export default function App() {
           diagnosis: tempDiagnosis,
           targetDuration: tempTargetDuration,
           startDate: getTodayStr(),
-          checkIns: {}
+          checkIns: {},
+          checkInLogs: {}
       };
       setDb(prev => {
         const newDb = { ...prev, [authForm.email]: newUser };
@@ -316,10 +400,10 @@ export default function App() {
       personalization += `Karena mayoritas di dalam ruangan, tambahkan rutinitas olahraga/jalan santai. `;
     }
 
-    if (tempProfile?.gender === 'wanita') {
-      personalization += `Perubahan hormonal pada wanita kadang bisa membuat craving lebih terasa, konsisten ya! `;
+    if (tempProfile?.gender === 'perempuan') {
+      personalization += `Perubahan hormonal pada perempuan kadang bisa membuat craving lebih terasa, konsisten ya! `;
     } else {
-      personalization += `Metabolisme pria biasanya memberikan adaptasi denyut jantung yang cepat di awal. `;
+      personalization += `Metabolisme laki-laki biasanya memberikan adaptasi denyut jantung yang cepat di awal. `;
     }
 
     setTempDiagnosis({
@@ -380,9 +464,15 @@ export default function App() {
       {/* HEADER: No Sesi variables except buttons where required */}
       <header className="p-6 border-b border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 shrink-0 bg-[#0a0a0a]/80 backdrop-blur-md sticky top-0 z-50">
         <motion.div className="text-center md:text-left">
-          <h1 className="text-3xl font-bold tracking-tight text-teal-400">
-            LEGA <span className="text-white font-light">| Tracker</span>
-          </h1>
+          <div className="flex items-center justify-center md:justify-start gap-3">
+            <div className="flex items-baseline drop-shadow-md">
+              <span className="text-white text-3xl font-black tracking-widest">L</span>
+              <span className="text-white text-3xl font-black tracking-widest ml-1.5">E</span>
+              <span className="text-teal-400 text-3xl font-black tracking-widest ml-1.5">G</span>
+              <span className="text-white text-3xl font-black tracking-widest ml-1.5">A</span>
+            </div>
+            <span className="text-white/50 font-light text-xl">| Tracker</span>
+          </div>
           <p className="text-gray-400 text-xs sm:text-sm italic mt-1">"Bernapas lebih panjang, hidup lebih tenang."</p>
         </motion.div>
         
@@ -439,8 +529,8 @@ export default function App() {
                 <div>
                   <label className="text-xs uppercase tracking-widest text-gray-400 mb-2 block">Jenis Kelamin</label>
                   <select value={profileForm.gender} onChange={e=>setProfileForm(p=>({...p, gender: e.target.value as Gender}))} className="w-full appearance-none bg-black/40 border border-white/10 text-teal-400 rounded-lg p-3 focus:outline-none focus:border-teal-500">
-                    <option value="pria">Pria</option>
-                    <option value="wanita">Wanita</option>
+                    <option value="laki-laki">Laki-laki</option>
+                    <option value="perempuan">Perempuan</option>
                   </select>
                 </div>
               </div>
@@ -602,14 +692,15 @@ export default function App() {
                     <p className="text-[10px] text-indigo-300/60 mb-6 leading-relaxed uppercase tracking-wider relative z-10">*Estimasi jika diinvestasikan penuh</p>
                     
                     {(() => {
-                       const pmt = activeUser.diagnosis.priceNum * activeUser.diagnosis.packsNum * 365;
-                       const fv = (years: number) => pmt * ((Math.pow(1.05, years) - 1) / 0.05) * 1.05;
+                       const durationWeeks = activeUser.targetDuration || currentDiagnosis.durationWeeks;
+                       const baseSaved = activeUser.diagnosis.priceNum * activeUser.diagnosis.packsNum * 7 * durationWeeks;
+                       const fv = (years: number) => baseSaved * Math.pow(1.05, years);
                        return (
                           <div className="mt-auto relative z-10 w-full">
                              <div className="mb-6">
-                                <h4 className="text-3xl sm:text-4xl font-black text-white mb-2">{formatRupiah(pmt)}</h4>
+                                <h4 className="text-3xl sm:text-4xl font-black text-white mb-2">{formatRupiah(baseSaved)}</h4>
                                 <p className="text-xs text-gray-400 leading-relaxed">
-                                   Potensi uang terkumpul dalam <span className="text-white font-bold">1 tahun</span> jika mengalokasikan pengeluaran <span className="text-white font-bold">{activeUser.diagnosis.packsNum} bungkus rokok/hari</span> (Rp{activeUser.diagnosis.priceNum.toLocaleString('id-ID')}/bgks).
+                                   Potensi uang terkumpul dalam <span className="text-white font-bold">{durationWeeks} minggu</span> (durasi tapering) jika mengalokasikan pengeluaran <span className="text-white font-bold">{activeUser.diagnosis.packsNum} bungkus rokok/hari</span> (Rp{activeUser.diagnosis.priceNum.toLocaleString('id-ID')}/bgks).
                                 </p>
                              </div>
                              <div className="grid grid-cols-3 gap-2 sm:gap-4 text-xs border-t border-indigo-500/30 pt-4">
@@ -671,7 +762,20 @@ export default function App() {
                   <button onClick={goBack} className="flex-1 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-bold text-gray-400 transition-colors uppercase text-sm tracking-widest">Batal</button>
                   <button onClick={() => {
                      const currentLog = activeUser?.checkIns || {};
-                     saveActiveUser({ checkIns: { ...currentLog, [getTodayStr()]: checkInVal } });
+                     const currentLogsMap = activeUser?.checkInLogs || {};
+                     const today = getTodayStr();
+                     const todayLogs = currentLogsMap[today] || [];
+                     const now = new Date();
+                     const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                     const currentTodayVal = currentLog[today] || 0;
+                     
+                     saveActiveUser({ 
+                       checkIns: { ...currentLog, [today]: currentTodayVal + checkInVal },
+                       checkInLogs: {
+                         ...currentLogsMap,
+                         [today]: [...todayLogs, { time: timeStr, value: checkInVal }]
+                       }
+                     });
                      goBack();
                   }} className="flex-1 py-4 bg-teal-500 hover:bg-teal-400 text-black font-bold rounded-xl transition-colors uppercase text-sm tracking-widest">Check-in</button>
                </div>
@@ -711,7 +815,12 @@ export default function App() {
              if(data.length === 0) return null;
              return (
                <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-                 <h3 className="text-xs uppercase tracking-widest text-gray-400 font-bold mb-6">Grafik Progres Konsumsi</h3>
+                 <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xs uppercase tracking-widest text-gray-400 font-bold">Grafik Progres Konsumsi</h3>
+                    <button onClick={() => navigate('history')} className="flex items-center gap-1.5 text-[10px] text-teal-400 hover:text-teal-300 font-bold uppercase tracking-widest transition px-3 py-1.5 bg-teal-500/10 hover:bg-teal-500/20 rounded-lg border border-teal-500/30">
+                      <History size={12} /> Riwayat
+                    </button>
+                 </div>
                  <div className="h-48 w-full">
                    <ResponsiveContainer width="100%" height="100%">
                      <LineChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
@@ -745,6 +854,11 @@ export default function App() {
 
           <button onClick={doLogout} className="w-full mt-4 py-4 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-500 font-bold rounded-xl transition uppercase tracking-widest text-sm">Logout Sesi Profil</button>
         </main>
+      )}
+
+      {/* HISTORY */}
+      {currentScreen === 'history' && activeUser && (
+        <HistoryScreen onBack={goBack} userLogs={activeUser.checkInLogs || {}} startDate={activeUser.startDate || getTodayStr()} />
       )}
 
       {/* SOS CRAVING */}
