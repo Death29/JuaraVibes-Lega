@@ -465,11 +465,11 @@ export default function App() {
       <header className="p-6 border-b border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 shrink-0 bg-[#0a0a0a]/80 backdrop-blur-md sticky top-0 z-50">
         <motion.div className="text-center md:text-left">
           <div className="flex items-center justify-center md:justify-start gap-3">
-            <div className="flex items-baseline drop-shadow-md">
-              <span className="text-white text-3xl font-black tracking-widest">L</span>
-              <span className="text-white text-3xl font-black tracking-widest ml-1.5">E</span>
-              <span className="text-teal-400 text-3xl font-black tracking-widest ml-1.5">G</span>
-              <span className="text-white text-3xl font-black tracking-widest ml-1.5">A</span>
+            <div className="flex items-baseline drop-shadow-md select-none">
+              <span className="text-transparent text-4xl font-black tracking-widest" style={{ WebkitTextStroke: '1px rgba(255,255,255,0.9)' }}>L</span>
+              <span className="text-transparent text-4xl font-black tracking-widest ml-1.5" style={{ WebkitTextStroke: '1px rgba(255,255,255,0.9)' }}>E</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-br from-[#FDE047] to-[#DFAB30] text-4xl font-black tracking-widest ml-1.5 drop-shadow-sm">G</span>
+              <span className="text-transparent text-4xl font-black tracking-widest ml-1.5" style={{ WebkitTextStroke: '1px rgba(255,255,255,0.9)' }}>A</span>
             </div>
             <span className="text-white/50 font-light text-xl">| Tracker</span>
           </div>
