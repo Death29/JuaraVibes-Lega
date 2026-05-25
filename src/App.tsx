@@ -747,6 +747,11 @@ export default function App() {
         </main>
       )}
 
+      {/* SOS CRAVING */}
+      {currentScreen === 'sos' && (
+        <SOSCraving onBack={goBack} />
+      )}
+
       {/* DETAIL TAPERING */}
       {currentScreen === 'detail_tapering' && currentDiagnosis && (
         <motion.main className="flex-1 flex flex-col p-6 max-w-5xl w-full mx-auto" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
